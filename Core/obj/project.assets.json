@@ -2410,17 +2410,17 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Saga\\Documents\\VScode\\NirvanaRemap\\Core\\Core.csproj",
+      "projectUniqueName": "C:\\Users\\Saga\\Documents\\GitHub\\RemapNirvana\\Core\\Core.csproj",
       "projectName": "Core",
-      "projectPath": "C:\\Users\\Saga\\Documents\\VScode\\NirvanaRemap\\Core\\Core.csproj",
+      "projectPath": "C:\\Users\\Saga\\Documents\\GitHub\\RemapNirvana\\Core\\Core.csproj",
       "packagesPath": "C:\\Users\\Saga\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Saga\\Documents\\VScode\\NirvanaRemap\\Core\\obj\\",
+      "outputPath": "C:\\Users\\Saga\\Documents\\GitHub\\RemapNirvana\\Core\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\Saga\\Documents\\VScode\\NirvanaRemap\\NuGet.Config",
+        "C:\\Users\\Saga\\Documents\\GitHub\\RemapNirvana\\NuGet.Config",
         "C:\\Users\\Saga\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"

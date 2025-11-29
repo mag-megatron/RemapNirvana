@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "UtLJsSWrMrY=",
+  "dgSpecHash": "R/E8iJHnnI4=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Saga\\Documents\\VScode\\NirvanaRemap\\Infrastructure\\Infrastructure.csproj",
+  "projectFilePath": "C:\\Users\\Saga\\Documents\\GitHub\\RemapNirvana\\Infrastructure\\Infrastructure.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Saga\\.nuget\\packages\\avalonia\\11.3.4\\avalonia.11.3.4.nupkg.sha512",
     "C:\\Users\\Saga\\.nuget\\packages\\avalonia.angle.windows.natives\\2.1.25547.20250602\\avalonia.angle.windows.natives.2.1.25547.20250602.nupkg.sha512",
