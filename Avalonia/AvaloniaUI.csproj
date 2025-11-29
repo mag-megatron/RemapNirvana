@@ -1,0 +1,60 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+	 <OutputType>WinExe</OutputType>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+	  <PackageReference Include="Avalonia" Version="11.3.4" />
+	  <PackageReference Include="Avalonia.Desktop" Version="11.3.4" />
+	  <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.4" />
+	  <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.4" />
+	  <PackageReference Include="Avalonia.Diagnostics" Version="11.3.4" Condition="'$(Configuration)'=='Debug'" />
+	  <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.4" />
+	  
+	  <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+	  
+	  <PackageReference Include="LiteDB" Version="5.0.21" />
+	  
+	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
+	  
+	  <PackageReference Include="Nefarius.ViGEm.Client" Version="1.21.256" />
+
+
+  </ItemGroup>
+
+  <ItemGroup>
+  
+
+  
+    <ProjectReference Include="..\ApplicationLayer\ApplicationLayer.csproj" />
+    <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaXaml Update="App.axaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\MainViewDefault.axaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\MainWindow.axaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </AvaloniaXaml>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Views\MainViewDefault.axaml.cs">
+      <DependentUpon>MainViewDefault.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+</Project>
