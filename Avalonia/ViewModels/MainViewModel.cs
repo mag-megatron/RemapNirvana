@@ -37,6 +37,8 @@ namespace AvaloniaUI.ViewModels
         private readonly MappingEngine _engine;
         private readonly IMappingStore _mappingStore;
         private readonly Dictionary<string, double> _lastUi = new();
+        private readonly Dictionary<string, double> _currentInputMap = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, double> _virtualOutputMap = new(StringComparer.OrdinalIgnoreCase);
         private readonly GamepadVirtualizationOrchestrator _virtualization;
         private readonly ViGEmOutput _vigem;
         private bool _physicalConnected;
@@ -49,6 +51,8 @@ namespace AvaloniaUI.ViewModels
         public ObservableCollection<InputStatus> CurrentInputs { get; } = new();
         public ObservableCollection<InputStatus> VirtualOutputs { get; } = new();
         public ObservableCollection<string> DevicesToHide { get; } = new();
+        public IReadOnlyDictionary<string, double> CurrentInputMap => _currentInputMap;
+        public IReadOnlyDictionary<string, double> VirtualOutputMap => _virtualOutputMap;
 
         [ObservableProperty] private string newDeviceId = "";
         [ObservableProperty] private string status = "Parado";
@@ -145,7 +149,26 @@ namespace AvaloniaUI.ViewModels
             var friendly = $"{info.Name} (VID:PID {info.VendorId:X4}:{info.ProductId:X4})";
             Status = _currentDeviceLikelyVirtual
                 ? $"Dispositivo virtual detectado: {friendly} (ignorado)"
-                : $"Controle físico ativo: {friendly}";
+                : $"Controle f¡sico ativo: {friendly}";
+
+            if (!_currentDeviceLikelyVirtual)
+                AutoAddPhysicalToHideList(info);
+        }
+
+        private void AutoAddPhysicalToHideList(PhysicalDeviceInfo info)
+        {
+            if (string.IsNullOrWhiteSpace(info.Path))
+                return;
+
+            // evita duplicar e nunca adiciona o virtual
+            if (_currentDeviceLikelyVirtual || DevicesToHide.Contains(info.Path))
+                return;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!DevicesToHide.Contains(info.Path))
+                    DevicesToHide.Add(info.Path);
+            });
         }
 
         // ---------------------------------------------------------
@@ -193,7 +216,11 @@ namespace AvaloniaUI.ViewModels
                         VirtualOutputs.Add(new InputStatus { Name = name, Value = value });
                     else
                         item.Value = value;
+
+                    _virtualOutputMap[name] = value;
                 }
+
+                OnPropertyChanged(nameof(VirtualOutputMap));
             });
         }
 
@@ -231,7 +258,11 @@ namespace AvaloniaUI.ViewModels
                     CurrentInputs.Add(new InputStatus { Name = name, Value = val });
                 else
                     item.Value = val;
+
+                _currentInputMap[name] = val;
             }
+
+            OnPropertyChanged(nameof(CurrentInputMap));
         }
 
         // ---------------------------------------------------------
@@ -369,3 +400,7 @@ namespace AvaloniaUI.ViewModels
         }
     }
 }
+
+
+
+

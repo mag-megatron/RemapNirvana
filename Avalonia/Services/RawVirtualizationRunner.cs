@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Channels;
 using AvaloniaUI.Hub;
 using AvaloniaUI.ProgramCore;
 
@@ -17,6 +18,17 @@ namespace AvaloniaUI.Services
         private readonly GamepadRemapService _capture;
         private readonly MappingEngine _engine;
         private readonly Infrastructure.Adapters.Outputs.ViGEmOutput _vigem;
+        private readonly Channel<Dictionary<string, double>> _inputQueue =
+            Channel.CreateBounded<Dictionary<string, double>>(
+                new BoundedChannelOptions(capacity: 8)
+                {
+                    SingleWriter = true,
+                    SingleReader = true,
+                    FullMode = BoundedChannelFullMode.DropOldest
+                });
+
+        private CancellationTokenSource? _workerCts;
+        private Task? _workerTask;
 
         public RawVirtualizationRunner(
             GamepadRemapService capture,
@@ -39,6 +51,9 @@ namespace AvaloniaUI.Services
 
             try
             {
+                _workerCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                _workerTask = Task.Run(() => ProcessQueueAsync(_workerCts.Token), _workerCts.Token);
+
                 await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -47,8 +62,21 @@ namespace AvaloniaUI.Services
             }
             finally
             {
+                _workerCts?.Cancel();
                 _capture.InputBatch -= OnInputBatch;
                 _capture.Stop();
+
+                if (_workerTask != null)
+                {
+                    try
+                    {
+                        await _workerTask.ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // cancelamento esperado
+                    }
+                }
             }
         }
 
@@ -57,21 +85,54 @@ namespace AvaloniaUI.Services
             if (snapshot.Count == 0)
                 return;
 
-            var outState = _engine.BuildOutput(snapshot);
-
             try
             {
-                _vigem.ApplyAll(outState);
+                // Cópia leve para não bloquear o loop de captura nem depender
+                // do buffer reutilizado pelo GamepadRemapService.
+                var copy = new Dictionary<string, double>(snapshot, StringComparer.Ordinal);
+                _inputQueue.Writer.TryWrite(copy);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("[RAW] Falha ao aplicar estado ViGEm: " + ex);
+                Debug.WriteLine("[RAW] Falha ao enfileirar snapshot: " + ex);
+            }
+        }
+
+        private async Task ProcessQueueAsync(CancellationToken ct)
+        {
+            try
+            {
+                while (await _inputQueue.Reader.WaitToReadAsync(ct).ConfigureAwait(false))
+                {
+                    while (_inputQueue.Reader.TryRead(out var snap))
+                    {
+                        var outState = _engine.BuildOutput(snap);
+
+                        try
+                        {
+                            _vigem.ApplyAll(outState);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine("[RAW] Falha ao aplicar estado ViGEm: " + ex);
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // encerramento solicitado
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[RAW] Loop de processamento interrompido: " + ex);
             }
         }
 
         public void Dispose()
         {
             _capture.InputBatch -= OnInputBatch;
+            _workerCts?.Cancel();
         }
     }
 }

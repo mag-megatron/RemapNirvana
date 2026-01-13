@@ -853,10 +853,10 @@ c:\Users\Saga\Documents\VScode\NirvanaRemap\Infrastructure\obj\Debug\net9.0\ref\
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\.msCoverageSourceRootsMapping_Infrastructure
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\testhost.dll
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\xunit.abstractions.dll
-C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\xunit.runner.visualstudio.testadapter.dll
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\Core.deps.json
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\Core.runtimeconfig.json
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\testhost.exe
+C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\xunit.runner.visualstudio.testadapter.dll
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\Infrastructure.deps.json
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\Infrastructure.runtimeconfig.json
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Infrastructure\bin\Debug\net9.0\Infrastructure.dll

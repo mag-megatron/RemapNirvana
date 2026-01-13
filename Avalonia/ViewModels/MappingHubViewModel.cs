@@ -28,12 +28,13 @@ namespace AvaloniaUI.ViewModels
                 {
                     OnPropertyChanged(nameof(AssignedDisplay));
                     OnPropertyChanged(nameof(ConflictNote));
+                    OnPropertyChanged(nameof(HasConflict));
                     _root.RefreshConflicts();
                 }
             }
         }
 
-        public string AssignedDisplay => Assigned == PhysicalInput.None ? "—" : Assigned.ToString();
+        public string AssignedDisplay => Assigned == PhysicalInput.None ? "-" : Assigned.ToString();
 
         public string ConflictNote
             => Assigned != PhysicalInput.None &&
@@ -41,6 +42,7 @@ namespace AvaloniaUI.ViewModels
                ? "Duplicado"
                : "";
 
+        public bool HasConflict => !string.IsNullOrEmpty(ConflictNote);
 
         public PhysicalInput[] AvailableInputs => _root.AvailableInputs;
 
@@ -68,6 +70,12 @@ namespace AvaloniaUI.ViewModels
             }
             catch { /* silencioso */ }
         }
+
+        internal void RefreshConflictState()
+        {
+            OnPropertyChanged(nameof(ConflictNote));
+            OnPropertyChanged(nameof(HasConflict));
+        }
     }
 
     public partial class MappingHubViewModel : ObservableObject
@@ -75,7 +83,7 @@ namespace AvaloniaUI.ViewModels
         [ObservableProperty] private string filter = "";
         [ObservableProperty] private string conflictSummary = "";
 
-        // ➜ NOVO: lista de perfis + perfil atual
+        // ? NOVO: lista de perfis + perfil atual
         public ObservableCollection<string> AvailableProfiles { get; } = new();
         [ObservableProperty]
         private string? currentProfileId;
@@ -85,6 +93,9 @@ namespace AvaloniaUI.ViewModels
 
         public PhysicalInput[] AvailableInputs { get; } =
             Enum.GetValues(typeof(PhysicalInput)).Cast<PhysicalInput>().ToArray();
+
+        // Evita loop ao alterar CurrentProfileId internamente (ex.: ao recarregar a lista).
+        private bool suppressProfileChangedHandling;
 
         public IRelayCommand ReloadCommand { get; }
         public IRelayCommand ClearAllCommand { get; }
@@ -99,7 +110,7 @@ namespace AvaloniaUI.ViewModels
 
         internal CancellationTokenSource? CaptureCts { get; private set; }
 
-        // ➜ NOVO EVENTO
+        // ? NOVO EVENTO
         public event Action? Saved;
 
         public MappingHubViewModel(IInputCaptureService captureService, IMappingStore mappingStore)
@@ -143,12 +154,12 @@ namespace AvaloniaUI.ViewModels
             SaveCommand = new AsyncRelayCommand(SaveAsync, () => CanSave);
             CancelCommand = new RelayCommand(() => { /* fechar/navegar no host */ });
 
-            NewProfileCommand = new RelayCommand(CreateNewProfile);
+            NewProfileCommand = new AsyncRelayCommand(CreateNewProfileAsync);
 
             _ = LoadAsync();
         }
 
-        private void CreateNewProfile()
+        private async Task CreateNewProfileAsync()
         {
             // gera um nome simples: perfil_1, perfil_2...
             string baseName = "perfil";
@@ -161,11 +172,19 @@ namespace AvaloniaUI.ViewModels
                 idx++;
             } while (AvailableProfiles.Contains(candidate, StringComparer.OrdinalIgnoreCase));
 
-            CurrentProfileId = candidate;
+            // Garante que o arquivo do novo perfil exista (gera defaults se preciso)
+            await MappingStore.LoadAsync(candidate, CancellationToken.None);
 
-            // zera os itens atuais (vai recarregar com tudo None)
+            suppressProfileChangedHandling = true;
+            CurrentProfileId = candidate;
+            suppressProfileChangedHandling = false;
+
+            // Recarrega a lista do disco (inclui o novo arquivo)
+            await LoadProfilesAsync(CurrentProfileId);
+
+            // zera os itens atuais (vai recarregar com defaults) e aplica em tempo real
             Items.Clear();
-            _ = LoadAsync();
+            await LoadAsync(refreshProfiles: false, raiseSaved: true);
         }
 
         private void ApplyFilter()
@@ -188,32 +207,70 @@ namespace AvaloniaUI.ViewModels
                 .Where(g => g.Count() > 1)
                 .ToList();
 
+            foreach (var item in Items)
+            {
+                item.RefreshConflictState();
+            }
+
             ConflictSummary = dups.Count == 0
                 ? "Sem conflitos"
-                : $"Conflitos: {string.Join(", ", dups.Select(g => $"{g.Key} ×{g.Count()}"))}";
+                : $"Conflitos: {string.Join(", ", dups.Select(g => $"{g.Key} x{g.Count()}"))}";
 
             OnPropertyChanged(nameof(CanSave));
             (SaveCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
         }
 
-        private async Task LoadProfilesAsync()
+        partial void OnCurrentProfileIdChanged(string? value)
         {
-            AvailableProfiles.Clear();
-            var profiles = await MappingStore.ListProfilesAsync(CancellationToken.None);
-            foreach (var p in profiles)
-                AvailableProfiles.Add(p);
+            if (suppressProfileChangedHandling)
+                return;
 
-            if (string.IsNullOrWhiteSpace(CurrentProfileId) && AvailableProfiles.Count > 0)
-                CurrentProfileId = AvailableProfiles[0];
+            // Selecao de perfil via UI: recarrega o mapeamento para esse perfil
+            _ = LoadAsync(refreshProfiles: false, raiseSaved: true);
         }
 
-        private async Task LoadAsync()
+        private async Task LoadProfilesAsync(string? preferredProfileId = null)
+        {
+            var desired = preferredProfileId ?? CurrentProfileId;
+
+            AvailableProfiles.Clear();
+            var profiles = await MappingStore.ListProfilesAsync(CancellationToken.None);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in profiles)
+            {
+                if (seen.Add(p))
+                    AvailableProfiles.Add(p);
+            }
+
+            string? next = null;
+            if (!string.IsNullOrWhiteSpace(desired) &&
+                AvailableProfiles.Contains(desired, StringComparer.OrdinalIgnoreCase))
+            {
+                next = desired;
+            }
+            else if (AvailableProfiles.Count > 0)
+            {
+                next = AvailableProfiles[0];
+            }
+
+            if (!string.Equals(CurrentProfileId, next, StringComparison.Ordinal))
+            {
+                suppressProfileChangedHandling = true;
+                CurrentProfileId = next;
+                suppressProfileChangedHandling = false;
+            }
+        }
+
+        private async Task LoadAsync(bool refreshProfiles = true, bool raiseSaved = false)
         {
             CaptureCts?.Cancel();
             CaptureCts = new CancellationTokenSource();
 
-            if (AvailableProfiles.Count == 0 || string.IsNullOrWhiteSpace(CurrentProfileId))
-                await LoadProfilesAsync();
+            if (refreshProfiles || AvailableProfiles.Count == 0)
+                await LoadProfilesAsync(CurrentProfileId);
+
+            if (string.IsNullOrWhiteSpace(CurrentProfileId))
+                return;
 
             var actions = MappingStore.GetDefaultActions();
             Dictionary<string, PhysicalInput> loaded;
@@ -223,13 +280,13 @@ namespace AvaloniaUI.ViewModels
                 loaded = new Dictionary<string, PhysicalInput>(StringComparer.OrdinalIgnoreCase);
                 foreach (var (action, assigned) in await MappingStore.LoadAsync(CurrentProfileId, CaptureCts.Token))
                 {
-                    // último binding para a mesma ação vence (evita exceção de chave duplicada)
+                    // Ultimo binding para a mesma acao vence (evita excecao de chave duplicada)
                     loaded[action] = assigned;
                 }
             }
             catch
             {
-                // Se der falha (arquivo bloqueado/corrompido), mantém a UI funcional com defaults
+                // Se der falha (arquivo bloqueado/corrompido), mantem a UI funcional com defaults
                 loaded = new Dictionary<string, PhysicalInput>(StringComparer.OrdinalIgnoreCase);
             }
 
@@ -253,6 +310,9 @@ namespace AvaloniaUI.ViewModels
                 ApplyFilter();
                 RefreshConflicts();
             }, DispatcherPriority.Background);
+
+            if (raiseSaved)
+                Saved?.Invoke();
         }
 
         private async Task SaveAsync()
@@ -262,23 +322,13 @@ namespace AvaloniaUI.ViewModels
             // salva no perfil atual (pode ser null => "mapping.json" default)
             await MappingStore.SaveAsync(CurrentProfileId, map, CancellationToken.None);
 
-            // 🔄 recarrega lista de perfis SEM reatribuir a coleção
-            var list = await MappingStore.ListProfilesAsync(CancellationToken.None);
-
-            AvailableProfiles.Clear();
-            foreach (var p in list)
-                AvailableProfiles.Add(p);
-
-            // se o perfil atual sumiu (foi renomeado, etc), garante um válido
-            if (AvailableProfiles.Count > 0 &&
-                (string.IsNullOrWhiteSpace(CurrentProfileId) ||
-                 !AvailableProfiles.Contains(CurrentProfileId)))
-            {
-                CurrentProfileId = AvailableProfiles[0];
-            }
+            // atualiza lista e garante que o perfil atual continua selecionado
+            await LoadProfilesAsync(CurrentProfileId);
 
             // avisa o MainViewModel pra recarregar o engine
             Saved?.Invoke();
         }
     }
 }
+
+

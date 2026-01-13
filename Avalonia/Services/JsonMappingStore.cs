@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,15 +11,15 @@ using AvaloniaUI.Hub;
 namespace AvaloniaUI.Services
 {
     /// <summary>
-    /// Implementação de IMappingStore que armazena mapeamentos em arquivos JSON
-    /// na pasta de dados da aplicação.
+    /// Implementacao de IMappingStore que armazena mapeamentos em arquivos JSON
+    /// na pasta de dados da aplicacao.
     /// </summary>
     public sealed class JsonMappingStore : IMappingStore
     {
         private readonly string _dir;
         private readonly string _defaultPath;
 
-        // Opções de serialização JSON: Indentado para leitura humana, camelCase para propriedades.
+        // Opcoes de serializacao JSON: indentado para leitura humana, camelCase para propriedades.
         private static readonly JsonSerializerOptions _json = new()
         {
             WriteIndented = true,
@@ -28,28 +28,28 @@ namespace AvaloniaUI.Services
         };
 
         /// <summary>
-        /// Inicializa uma nova instância do JsonMappingStore.
+        /// Inicializa uma nova instancia do JsonMappingStore.
         /// </summary>
-        /// <param name="filePath">Caminho de arquivo opcional para o mapeamento padrão. Se nulo, usa o caminho padrão.</param>
+        /// <param name="filePath">Caminho de arquivo opcional para o mapeamento padrao. Se nulo, usa o caminho padrao.</param>
         public JsonMappingStore(string? filePath = null)
         {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             _dir = Path.Combine(appData, "NirvanaRemap");
 
-            // Garante que o diretório exista.
+            // Garante que o diretorio exista.
             Directory.CreateDirectory(_dir);
 
             _defaultPath = filePath ?? Path.Combine(_dir, "mapping.json");
         }
 
         // ----------------------------------------------------------
-        // Ações Padrão
+        // Acoes Padrao
         // ----------------------------------------------------------
 
         /// <summary>
-        /// Obtém a lista de nomes de ações padrão que o sistema reconhece.
+        /// Obtem a lista de nomes de acoes padrao que o sistema reconhece.
         /// </summary>
-        /// <returns>Um array de strings com os nomes das ações.</returns>
+        /// <returns>Um array de strings com os nomes das acoes.</returns>
         public string[] GetDefaultActions()
         {
             return GetBuiltInDefaultMapping()
@@ -64,7 +64,7 @@ namespace AvaloniaUI.Services
         {
             return new[]
             {
-        // BOTÕES
+        // BOTOES
         ("ButtonA", PhysicalInput.ButtonSouth),
         ("ButtonB", PhysicalInput.ButtonEast),
         ("ButtonX", PhysicalInput.ButtonWest),
@@ -88,7 +88,7 @@ namespace AvaloniaUI.Services
         ("TriggerLeft", PhysicalInput.LeftTrigger),
         ("TriggerRight", PhysicalInput.RightTrigger),
 
-        // STICKS analógicos (mapeia ambos os lados para o mesmo eixo)
+        // STICKS analogicos (mapeia ambos os lados para o mesmo eixo)
         ("ThumbLX", PhysicalInput.LeftStickX_Pos),
         ("ThumbLX", PhysicalInput.LeftStickX_Neg),
         ("ThumbLY", PhysicalInput.LeftStickY_Pos),
@@ -105,10 +105,10 @@ namespace AvaloniaUI.Services
         // ----------------------------------------------------------
 
         /// <summary>
-        /// Lista os perfis de mapeamento disponíveis (até 5 arquivos JSON, excluindo o default).
+        /// Lista os perfis de mapeamento disponiveis (ate 5 arquivos JSON, excluindo o default).
         /// </summary>
         /// <param name="ct">Token de cancelamento.</param>
-        /// <returns>Um Task contendo um array de IDs de perfil (nomes de arquivo sem extensão).</returns>
+        /// <returns>Um Task contendo um array de IDs de perfil (nomes de arquivo sem extensao).</returns>
         public Task<string[]> ListProfilesAsync(CancellationToken ct)
         {
             // Pega todos os arquivos .json na pasta.
@@ -116,9 +116,11 @@ namespace AvaloniaUI.Services
                 .GetFiles(_dir, "*.json")
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .Select(Path.GetFileNameWithoutExtension)
+                .OfType<string>()
+                .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToList();
 
-            // Garante que o perfil "mapping" (default) esteja sempre na primeira posição da lista
+            // Garante que o perfil "mapping" (default) esteja sempre na primeira posicao da lista
             // e seja chamado de "mapping" ou "default".
             var defaultProfileName = "mapping";
             if (files.Contains(defaultProfileName))
@@ -127,10 +129,11 @@ namespace AvaloniaUI.Services
             }
             files.Insert(0, defaultProfileName);
 
-            // Limita a 5 perfis no total.
-            var result = files.Take(5).ToArray();
+            // Remove duplicatas preservando a ordem (default primeiro)
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var ordered = files.Where(name => seen.Add(name)).ToArray();
 
-            return Task.FromResult(result);
+            return Task.FromResult(ordered);
         }
 
         // ----------------------------------------------------------
@@ -144,7 +147,7 @@ namespace AvaloniaUI.Services
         /// <returns>O caminho de arquivo completo para o perfil.</returns>
         private string ResolvePath(string? profileId)
         {
-            // Trata IDs vazios ou "default/mapping" como o caminho padrão.
+            // Trata IDs vazios ou "default/mapping" como o caminho padrao.
             if (string.IsNullOrWhiteSpace(profileId)
                 || profileId.Equals("mapping", StringComparison.OrdinalIgnoreCase)
                 || profileId.Equals("default", StringComparison.OrdinalIgnoreCase))
@@ -152,7 +155,7 @@ namespace AvaloniaUI.Services
                 return _defaultPath;
             }
 
-            // Sanitiza o nome de arquivo para remover caracteres inválidos.
+            // Sanitiza o nome de arquivo para remover caracteres invalidos.
             var safe = string.Join("_", profileId.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
 
             // Caso o nome sanitizado fique vazio.
@@ -169,11 +172,11 @@ namespace AvaloniaUI.Services
         // ----------------------------------------------------------
 
         /// <summary>
-        /// Carrega o mapeamento de um perfil específico de forma assíncrona.
+        /// Carrega o mapeamento de um perfil especifico de forma assincrona.
         /// </summary>
         /// <param name="profileId">O ID do perfil a carregar.</param>
         /// <param name="ct">Token de cancelamento.</param>
-        /// <returns>Um array de tuplas (ação, input físico) do mapeamento carregado.</returns>
+        /// <returns>Um array de tuplas (acao, input fisico) do mapeamento carregado.</returns>
         public async Task<(string action, PhysicalInput assigned)[]> 
         LoadAsync(
                 string? profileId,
@@ -182,7 +185,7 @@ namespace AvaloniaUI.Services
         {
             var path = ResolvePath(profileId);
 
-            // 1) Se não existe, gera default e salva
+            // 1) Se nao existe, gera default e salva
             if (!File.Exists(path))
             {
                 var def = GetBuiltInDefaultMapping();
@@ -238,7 +241,7 @@ namespace AvaloniaUI.Services
             }
             catch
             {
-                // 3) Qualquer outro erro (IO/lock): usa default em mem�ria para manter a UI funcional
+                // 3) Qualquer outro erro (IO/lock): usa default em mem?ria para manter a UI funcional
                 var def = GetBuiltInDefaultMapping();
                 try
                 {
@@ -246,17 +249,17 @@ namespace AvaloniaUI.Services
                 }
                 catch
                 {
-                    // ignora falha de grava��o
+                    // ignora falha de grava??o
                 }
                 return def;
             }
         }
 
         /// <summary>
-        /// Salva o mapeamento fornecido para um perfil específico de forma assíncrona.
+        /// Salva o mapeamento fornecido para um perfil especifico de forma assincrona.
         /// </summary>
         /// <param name="profileId">O ID do perfil onde salvar.</param>
-        /// <param name="map">O array de tuplas (ação, input físico) a ser salvo.</param>
+        /// <param name="map">O array de tuplas (acao, input fisico) a ser salvo.</param>
         /// <param name="ct">Token de cancelamento.</param>
         public async Task SaveAsync(
             string? profileId,
@@ -265,9 +268,13 @@ namespace AvaloniaUI.Services
         {
             var path = ResolvePath(profileId);
 
-            // Converte o array de tuplas para uma lista de objetos Entry para serialização.
-            var list = new List<Entry>(map.Length);
-            foreach (var (a, p) in map)
+            // Normaliza eixos para sempre salvar ambos os lados (pos/neg),
+            // evitando inversoes a cada carregamento.
+            var normalized = NormalizeAxisEntries(map);
+
+            // Converte o array de tuplas para uma lista de objetos Entry para serializacao.
+            var list = new List<Entry>(normalized.Count);
+            foreach (var (a, p) in normalized)
             {
                 list.Add(new Entry { Action = a, Assigned = p });
             }
@@ -278,11 +285,11 @@ namespace AvaloniaUI.Services
         }
 
         // ----------------------------------------------------------
-        // Classe auxiliar de serialização
+        // Classe auxiliar de serializacao
         // ----------------------------------------------------------
 
         /// <summary>
-        /// Representa uma única entrada de mapeamento para fins de serialização/desserialização JSON.
+        /// Representa uma unica entrada de mapeamento para fins de serializacao/desserializacao JSON.
         /// </summary>
         private sealed class Entry
         {
@@ -290,8 +297,8 @@ namespace AvaloniaUI.Services
             public PhysicalInput Assigned { get; set; } = PhysicalInput.None;
         }
 
-        // Converte nomes antigos de ações de eixo (LX+/LX-/...) para os novos
-        // nomes contínuos (ThumbLX/ThumbLY/...), preservando compatibilidade.
+        // Converte nomes antigos de acoes de eixo (LX+/LX-/...) para os novos
+        // nomes continuos (ThumbLX/ThumbLY/...), preservando compatibilidade.
         private static (bool changed, List<Entry> entries) MigrateLegacyActions(List<Entry> data)
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -328,7 +335,7 @@ namespace AvaloniaUI.Services
             return (changed, result);
         }
 
-        // Garante que, se um eixo analógico estiver presente, ambos os lados (pos/neg)
+        // Garante que, se um eixo analogico estiver presente, ambos os lados (pos/neg)
         // tenham entradas, evitando que apenas direita/baixo funcionem.
         private static (bool changed, List<Entry> entries) EnsureAxisPairs(List<Entry> data)
         {
@@ -348,7 +355,7 @@ namespace AvaloniaUI.Services
                 bool hasPos = list.Any(e => string.Equals(e.Action, action, StringComparison.OrdinalIgnoreCase) && e.Assigned == pos);
                 bool hasNeg = list.Any(e => string.Equals(e.Action, action, StringComparison.OrdinalIgnoreCase) && e.Assigned == neg);
 
-                // Só corrige se o eixo já está mapeado para algum lado (evita recriar se o usuário limpou ambos)
+                // So corrige se o eixo ja esta mapeado para algum lado (evita recriar se o usuario limpou ambos)
                 if (!(hasPos || hasNeg))
                     continue;
 
@@ -368,14 +375,14 @@ namespace AvaloniaUI.Services
             return (changed, list);
         }
 
-        // Garante que todas as ações padrão tenham algum binding (default completo).
-        // Se um perfil existente estiver faltando ações, preenche com o mapeamento built-in.
+        // Garante que todas as acoes padrao tenham algum binding (default completo).
+        // Se um perfil existente estiver faltando acoes, preenche com o mapeamento built-in.
         private static (bool changed, List<Entry> entries) MergeWithDefaults(List<Entry> data)
         {
             var changed = false;
             var dict = new Dictionary<string, PhysicalInput>(StringComparer.OrdinalIgnoreCase);
 
-            // preserva último binding encontrado para cada ação, ignorando entradas None (considera como ausente)
+            // preserva ultimo binding encontrado para cada acao, ignorando entradas None (considera como ausente)
             foreach (var e in data)
             {
                 if (e.Assigned == PhysicalInput.None)
@@ -399,5 +406,74 @@ namespace AvaloniaUI.Services
             var result = dict.Select(kv => new Entry { Action = kv.Key, Assigned = kv.Value }).ToList();
             return (changed, result);
         }
+
+        // ----------------------------------------------------------
+        // Normalizacao de eixos antes de salvar
+        // ----------------------------------------------------------
+
+        private static bool IsAxisAction(string action) =>
+            string.Equals(action, "ThumbLX", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(action, "ThumbLY", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(action, "ThumbRX", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(action, "ThumbRY", StringComparison.OrdinalIgnoreCase);
+
+        private static bool TryGetAxisPair(PhysicalInput input, out PhysicalInput counterpart)
+        {
+            switch (input)
+            {
+                case PhysicalInput.LeftStickX_Pos:
+                    counterpart = PhysicalInput.LeftStickX_Neg; return true;
+                case PhysicalInput.LeftStickX_Neg:
+                    counterpart = PhysicalInput.LeftStickX_Pos; return true;
+                case PhysicalInput.LeftStickY_Pos:
+                    counterpart = PhysicalInput.LeftStickY_Neg; return true;
+                case PhysicalInput.LeftStickY_Neg:
+                    counterpart = PhysicalInput.LeftStickY_Pos; return true;
+                case PhysicalInput.RightStickX_Pos:
+                    counterpart = PhysicalInput.RightStickX_Neg; return true;
+                case PhysicalInput.RightStickX_Neg:
+                    counterpart = PhysicalInput.RightStickX_Pos; return true;
+                case PhysicalInput.RightStickY_Pos:
+                    counterpart = PhysicalInput.RightStickY_Neg; return true;
+                case PhysicalInput.RightStickY_Neg:
+                    counterpart = PhysicalInput.RightStickY_Pos; return true;
+                default:
+                    counterpart = default;
+                    return false;
+            }
+        }
+
+        private static List<(string action, PhysicalInput assigned)> NormalizeAxisEntries(
+            (string action, PhysicalInput assigned)[] map)
+        {
+            var result = new List<(string, PhysicalInput)>();
+
+            void AddIfMissing(string action, PhysicalInput input)
+            {
+                if (!result.Any(e =>
+                        string.Equals(e.Item1, action, StringComparison.OrdinalIgnoreCase) &&
+                        e.Item2 == input))
+                {
+                    result.Add((action, input));
+                }
+            }
+
+            foreach (var (action, assigned) in map)
+            {
+                if (IsAxisAction(action) && TryGetAxisPair(assigned, out var other))
+                {
+                    // Deixa o lado selecionado por ultimo para que ele prevaleca na UI
+                    AddIfMissing(action, other);
+                    AddIfMissing(action, assigned);
+                }
+                else
+                {
+                    AddIfMissing(action, assigned);
+                }
+            }
+
+            return result;
+        }
     }
 }
+

@@ -1,0 +1,421 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:AvaloniaUI.ViewModels"
+             xmlns:conv="clr-namespace:AvaloniaUI.Converters"
+             x:Class="AvaloniaUI.Views.GamepadMonitor"
+             x:DataType="vm:MainViewModel"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <conv:ValueToWidthConverter x:Key="ValueToWidthConverter" />
+        <conv:InputValueConverter x:Key="InputValueConverter" />
+        <conv:InputLevelConverter x:Key="InputLevelConverter" />
+        <conv:StickOffsetConverter x:Key="StickOffsetConverter" />
+    </UserControl.Resources>
+
+    <Border Classes="card">
+        <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,4">
+                <Border Grid.Column="0"
+                        Background="#238636"
+                        Width="4"
+                        CornerRadius="2"
+                        Margin="0,0,12,0" />
+                <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBlock Text="VISUALIZACAO DE GAMEPAD"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="#e6edf3"
+                               LetterSpacing="1" />
+                    <TextBlock Text="Fisico (entrada) e virtual (saida) no mesmo layout, estilo Gamepad Tester."
+                               FontSize="11"
+                               Foreground="#7d8590" />
+                </StackPanel>
+            </Grid>
+
+            <Viewbox Stretch="Uniform" StretchDirection="Both" MaxHeight="420">
+                <Grid Width="880" Height="340" ColumnDefinitions="*,*" ColumnSpacing="14">
+                    <!-- FÍSICO -->
+                    <Border Background="#0d1117"
+                            BorderBrush="#1f2630"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="12">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <TextBlock Text="FISICO"
+                                           FontSize="13"
+                                           FontWeight="Bold"
+                                           Foreground="#7ee787" />
+                                <TextBlock Grid.Column="1"
+                                           Text="Entrada direta do hardware"
+                                           FontSize="11"
+                                           Foreground="#7d8590" />
+                            </Grid>
+
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                                  RowSpacing="12">
+                                <!-- Triggers e Shoulders -->
+                                <Grid Grid.Row="0"
+                                      ColumnDefinitions="1*,1*,1*,1*,1*"
+                                      ColumnSpacing="9">
+                                    <StackPanel Grid.Column="0" Spacing="4">
+                                        <TextBlock Text="LT" FontSize="11" Foreground="#7d8590" />
+                                        <Border x:Name="PhyLTBar" Background="#161b22" CornerRadius="4" Height="10">
+                                            <Border CornerRadius="4" Background="#2ea043" HorizontalAlignment="Left">
+                                                <Border.Width>
+                                                    <MultiBinding Converter="{StaticResource ValueToWidthConverter}">
+                                                        <Binding Path="CurrentInputMap"
+                                                                 Converter="{StaticResource InputValueConverter}"
+                                                                 ConverterParameter="LT" />
+                                                        <Binding Path="#PhyLTBar.Bounds.Width" />
+                                                    </MultiBinding>
+                                                </Border.Width>
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <Border Grid.Column="1" Background="#2ea043" CornerRadius="6" Height="20"
+                                            Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='LB'}" />
+
+                                    <Border Grid.Column="2" Background="#1a1f26" CornerRadius="6" Height="8" />
+
+                                    <Border Grid.Column="3" Background="#2ea043" CornerRadius="6" Height="20"
+                                            Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='RB'}" />
+
+                                    <StackPanel Grid.Column="4" Spacing="4">
+                                        <TextBlock Text="RT" FontSize="11" Foreground="#7d8590" HorizontalAlignment="Right" />
+                                        <Border x:Name="PhyRTBar" Background="#161b22" CornerRadius="4" Height="10">
+                                            <Border CornerRadius="4" Background="#2ea043" HorizontalAlignment="Left">
+                                                <Border.Width>
+                                                    <MultiBinding Converter="{StaticResource ValueToWidthConverter}">
+                                                        <Binding Path="CurrentInputMap"
+                                                                 Converter="{StaticResource InputValueConverter}"
+                                                                 ConverterParameter="RT" />
+                                                        <Binding Path="#PhyRTBar.Bounds.Width" />
+                                                    </MultiBinding>
+                                                </Border.Width>
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
+
+
+                                </Grid>
+
+                                <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Height="110" Margin="0,-120,0,0">
+                                     <!-- Botões centrais -->
+                                    <StackPanel Grid.Column="1" Spacing="6" HorizontalAlignment="Center" Orientation="Horizontal"
+                                                Height="25">
+                                        <Border Background="#161b22" CornerRadius="8" Padding="10,6"
+                                                Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='View'}">
+                                            <TextBlock Text="VIEW" FontSize="11" Foreground="#9ba5b1" />
+                                        </Border>
+                                        <Border Background="#161b22" CornerRadius="8" Padding="10,6"
+                                                Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='Menu'}">
+                                            <TextBlock Text="MENU" FontSize="11" Foreground="#9ba5b1" />
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- D-Pad e Botões ABXY (parte superior) -->
+                                <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Height="110" Margin="0,30,0,0">
+                                    <!-- D-Pad -->
+                                    <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Border Width="96" Height="96" Background="#111822" BorderBrush="#223044"
+                                                BorderThickness="1.5" CornerRadius="48" />
+                                        <Grid Width="72" Height="72">
+                                            <Rectangle Fill="#3a4d60" RadiusX="6" RadiusY="6" Height="18" Width="14"
+                                                       VerticalAlignment="Top"
+                                                       Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='DUp'}" />
+                                            <Rectangle Fill="#3a4d60" RadiusX="6" RadiusY="6" Height="18" Width="14"
+                                                       VerticalAlignment="Bottom"
+                                                       Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='DDown'}" />
+                                            <Rectangle Fill="#3a4d60" RadiusX="6" RadiusY="6" Height="14" Width="18"
+                                                       HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                       Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='DLeft'}" />
+                                            <Rectangle Fill="#3a4d60" RadiusX="6" RadiusY="6" Height="14" Width="18"
+                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                       Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='DRight'}" />
+                                        </Grid>
+                                    </Grid>
+
+                             
+                                    <!-- Botões ABXY -->
+                                    <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Border Width="28" Height="28" Background="#2ea043" CornerRadius="14"
+                                                Margin="0,-50,0,0"
+                                                Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='Y'}">
+                                            <TextBlock Text="Y" FontSize="11" FontWeight="Bold" Foreground="#0b0f14"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <Border Width="28" Height="28" Background="#2ea043" CornerRadius="14"
+                                                Margin="-50,0,0,0"
+                                                Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='X'}">
+                                            <TextBlock Text="X" FontSize="11" FontWeight="Bold" Foreground="#0b0f14"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <Border Width="28" Height="28" Background="#2ea043" CornerRadius="14"
+                                                Margin="0,50,0,0"
+                                                Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='A'}">
+                                            <TextBlock Text="A" FontSize="11" FontWeight="Bold" Foreground="#0b0f14"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <Border Width="28" Height="28" Background="#2ea043" CornerRadius="14"
+                                                Margin="50,0,0,0"
+                                                Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='B'}">
+                                            <TextBlock Text="B" FontSize="11" FontWeight="Bold" Foreground="#0b0f14"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+
+                              
+
+                                <!-- Analógicos (parte inferior) -->
+                                <Grid Grid.Row="3" ColumnDefinitions="*,*,*" Height="110">
+                                    <!-- Analógico Esquerdo -->
+                                    <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="120,0,0,40">
+                                        <Border Width="104" Height="104" Background="#121821" CornerRadius="52"
+                                                BorderBrush="#223043" BorderThickness="1" />
+                                        <Border Width="104" Height="104" CornerRadius="52" BorderBrush="#2ea043"
+                                                BorderThickness="2"
+                                                Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='L3'}" />
+                                        <Border Width="18" Height="18" Background="#2ea043" CornerRadius="9">
+                                            <Border.RenderTransform>
+                                                <MultiBinding Converter="{StaticResource StickOffsetConverter}" ConverterParameter="34">
+                                                    <Binding Path="CurrentInputMap"
+                                                             Converter="{StaticResource InputValueConverter}"
+                                                             ConverterParameter="LX" />
+                                                    <Binding Path="CurrentInputMap"
+                                                             Converter="{StaticResource InputValueConverter}"
+                                                             ConverterParameter="LY" />
+                                                </MultiBinding>
+                                            </Border.RenderTransform>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Espaço central -->
+                                    <Grid Grid.Column="1" />
+
+                                    <!-- Analógico Direito -->
+                                    <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,120,40">
+                                        <Border Width="104" Height="104" Background="#121821" CornerRadius="52"
+                                                BorderBrush="#223043" BorderThickness="1" />
+                                        <Border Width="104" Height="104" CornerRadius="52" BorderBrush="#2ea043"
+                                                BorderThickness="2"
+                                                Opacity="{Binding CurrentInputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='R3'}" />
+                                        <Border Width="18" Height="18" Background="#2ea043" CornerRadius="9">
+                                            <Border.RenderTransform>
+                                                <MultiBinding Converter="{StaticResource StickOffsetConverter}" ConverterParameter="34">
+                                                    <Binding Path="CurrentInputMap"
+                                                             Converter="{StaticResource InputValueConverter}"
+                                                             ConverterParameter="RX" />
+                                                    <Binding Path="CurrentInputMap"
+                                                             Converter="{StaticResource InputValueConverter}"
+                                                             ConverterParameter="RY" />
+                                                </MultiBinding>
+                                            </Border.RenderTransform>
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- VIRTUAL -->
+                    <Border Grid.Column="1"
+                            Background="#0d1117"
+                            BorderBrush="#1f2630"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="12">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <TextBlock Text="VIRTUAL"
+                                           FontSize="13"
+                                           FontWeight="Bold"
+                                           Foreground="#a371f7" />
+                                <TextBlock Grid.Column="1"
+                                           Text="Saida mapeada (ViGEm) que o jogo recebe"
+                                           FontSize="11"
+                                           Foreground="#7d8590" />
+                            </Grid>
+
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+      RowSpacing="12">
+
+    <!-- Triggers e Shoulders (igual já estava) -->
+    <Grid Grid.Row="0"
+          ColumnDefinitions="1*,1*,1*,1*,1*"
+          ColumnSpacing="9">
+        <StackPanel Grid.Column="0" Spacing="4">
+            <TextBlock Text="LT" FontSize="11" Foreground="#7d8590" />
+            <Border x:Name="VirtLTBar" Background="#161b22" CornerRadius="4" Height="10">
+                <Border CornerRadius="4" Background="#a371f7" HorizontalAlignment="Left">
+                    <Border.Width>
+                        <MultiBinding Converter="{StaticResource ValueToWidthConverter}">
+                            <Binding Path="VirtualOutputMap"
+                                     Converter="{StaticResource InputValueConverter}"
+                                     ConverterParameter="TriggerLeft" />
+                            <Binding Path="#VirtLTBar.Bounds.Width" />
+                        </MultiBinding>
+                    </Border.Width>
+                </Border>
+            </Border>
+        </StackPanel>
+
+        <Border Grid.Column="1" Background="#a371f7" CornerRadius="6" Height="20"
+                Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ButtonLeftShoulder'}" />
+
+        <Border Grid.Column="2" Background="#1a1f26" CornerRadius="6" Height="8" />
+
+        <Border Grid.Column="3" Background="#a371f7" CornerRadius="6" Height="20"
+                Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ButtonRightShoulder'}" />
+
+        <StackPanel Grid.Column="4" Spacing="4">
+            <TextBlock Text="RT" FontSize="11" Foreground="#7d8590" HorizontalAlignment="Right" />
+            <Border x:Name="VirtRTBar" Background="#161b22" CornerRadius="4" Height="10">
+                <Border CornerRadius="4" Background="#a371f7" HorizontalAlignment="Left">
+                    <Border.Width>
+                        <MultiBinding Converter="{StaticResource ValueToWidthConverter}">
+                            <Binding Path="VirtualOutputMap"
+                                     Converter="{StaticResource InputValueConverter}"
+                                     ConverterParameter="TriggerRight" />
+                            <Binding Path="#VirtRTBar.Bounds.Width" />
+                        </MultiBinding>
+                    </Border.Width>
+                </Border>
+            </Border>
+        </StackPanel>
+    </Grid>
+
+    <!-- Botões centrais (mesmo layout do FÍSICO: sobreposto com margin negativa) -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Height="110" Margin="0,-120,0,0">
+        <StackPanel Grid.Column="1" Spacing="6" HorizontalAlignment="Center"
+                    Orientation="Horizontal" Height="25">
+            <Border Background="#161b22" CornerRadius="8" Padding="10,6"
+                    Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ButtonBack'}">
+                <TextBlock Text="BACK" FontSize="11" Foreground="#9ba5b1" />
+            </Border>
+            <Border Background="#161b22" CornerRadius="8" Padding="10,6"
+                    Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ButtonStart'}">
+                <TextBlock Text="START" FontSize="11" Foreground="#9ba5b1" />
+            </Border>
+        </StackPanel>
+    </Grid>
+
+    <!-- D-Pad e Botões ABXY (mesmo layout do FÍSICO: margin +30 e offsets de 50px) -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Height="110" Margin="0,30,0,0">
+        <!-- D-Pad -->
+        <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Width="96" Height="96" Background="#111822" BorderBrush="#223044"
+                    BorderThickness="1.5" CornerRadius="48" />
+            <Grid Width="72" Height="72">
+                <Rectangle Fill="#6b5c9c" RadiusX="6" RadiusY="6" Height="18" Width="14"
+                           VerticalAlignment="Top"
+                           Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='DPadUp'}" />
+                <Rectangle Fill="#6b5c9c" RadiusX="6" RadiusY="6" Height="18" Width="14"
+                           VerticalAlignment="Bottom"
+                           Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='DPadDown'}" />
+                <Rectangle Fill="#6b5c9c" RadiusX="6" RadiusY="6" Height="14" Width="18"
+                           HorizontalAlignment="Left" VerticalAlignment="Center"
+                           Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='DPadLeft'}" />
+                <Rectangle Fill="#6b5c9c" RadiusX="6" RadiusY="6" Height="14" Width="18"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='DPadRight'}" />
+            </Grid>
+        </Grid>
+
+        <!-- Espaço central -->
+        <Grid Grid.Column="1" />
+
+        <!-- Botões ABXY (offsets iguais ao FÍSICO: 50 em vez de 38) -->
+        <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Width="28" Height="28" Background="#a371f7" CornerRadius="14"
+                    Margin="0,-50,0,0"
+                    Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ButtonY'}">
+                <TextBlock Text="Y" FontSize="11" FontWeight="Bold" Foreground="#0b0f14"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+
+            <Border Width="28" Height="28" Background="#a371f7" CornerRadius="14"
+                    Margin="-50,0,0,0"
+                    Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ButtonX'}">
+                <TextBlock Text="X" FontSize="11" FontWeight="Bold" Foreground="#0b0f14"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+
+            <Border Width="28" Height="28" Background="#a371f7" CornerRadius="14"
+                    Margin="0,50,0,0"
+                    Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ButtonA'}">
+                <TextBlock Text="A" FontSize="11" FontWeight="Bold" Foreground="#0b0f14"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+
+            <Border Width="28" Height="28" Background="#a371f7" CornerRadius="14"
+                    Margin="50,0,0,0"
+                    Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ButtonB'}">
+                <TextBlock Text="B" FontSize="11" FontWeight="Bold" Foreground="#0b0f14"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+        </Grid>
+    </Grid>
+
+    <!-- Analógicos (mesmo layout do FÍSICO: offsets laterais + bottom) -->
+    <Grid Grid.Row="3" ColumnDefinitions="*,*,*" Height="110">
+        <!-- Analógico Esquerdo -->
+        <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="120,0,0,40">
+            <Border Width="104" Height="104" Background="#121821" CornerRadius="52"
+                    BorderBrush="#223043" BorderThickness="1" />
+            <Border Width="104" Height="104" CornerRadius="52" BorderBrush="#a371f7"
+                    BorderThickness="2"
+                    Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ThumbLPressed'}" />
+            <Border Width="18" Height="18" Background="#a371f7" CornerRadius="9">
+                <Border.RenderTransform>
+                    <MultiBinding Converter="{StaticResource StickOffsetConverter}" ConverterParameter="34">
+                        <Binding Path="VirtualOutputMap"
+                                 Converter="{StaticResource InputValueConverter}"
+                                 ConverterParameter="ThumbLX" />
+                        <Binding Path="VirtualOutputMap"
+                                 Converter="{StaticResource InputValueConverter}"
+                                 ConverterParameter="ThumbLY" />
+                    </MultiBinding>
+                </Border.RenderTransform>
+            </Border>
+        </Grid>
+
+        <!-- Espaço central -->
+        <Grid Grid.Column="1" />
+
+        <!-- Analógico Direito -->
+        <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,120,40">
+            <Border Width="104" Height="104" Background="#121821" CornerRadius="52"
+                    BorderBrush="#223043" BorderThickness="1" />
+            <Border Width="104" Height="104" CornerRadius="52" BorderBrush="#a371f7"
+                    BorderThickness="2"
+                    Opacity="{Binding VirtualOutputMap, Converter={StaticResource InputLevelConverter}, ConverterParameter='ThumbRPressed'}" />
+            <Border Width="18" Height="18" Background="#a371f7" CornerRadius="9">
+                <Border.RenderTransform>
+                    <MultiBinding Converter="{StaticResource StickOffsetConverter}" ConverterParameter="34">
+                        <Binding Path="VirtualOutputMap"
+                                 Converter="{StaticResource InputValueConverter}"
+                                 ConverterParameter="ThumbRX" />
+                        <Binding Path="VirtualOutputMap"
+                                 Converter="{StaticResource InputValueConverter}"
+                                 ConverterParameter="ThumbRY" />
+                    </MultiBinding>
+                </Border.RenderTransform>
+            </Border>
+        </Grid>
+    </Grid>
+
+</Grid>
+
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Viewbox>
+        </StackPanel>
+    </Border>
+</UserControl>

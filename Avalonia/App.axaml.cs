@@ -25,6 +25,11 @@ namespace AvaloniaUI
                 };
             }
 
+#if DEBUG
+            this.AttachDevTools();
+#endif
+
+
             base.OnFrameworkInitializationCompleted();
         }
     }

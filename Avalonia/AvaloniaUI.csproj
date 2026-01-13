@@ -6,9 +6,18 @@
     <LangVersion>latest</LangVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	  <AssemblyName>NirvanaRemap</AssemblyName>
+	  <RootNamespace>NirvanaRemap</RootNamespace>
+	  <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<Optimize>false</Optimize>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
+	</PropertyGroup>
 
-  <ItemGroup>
+
+	<ItemGroup>
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 

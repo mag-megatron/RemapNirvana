@@ -38,11 +38,13 @@ namespace AvaloniaUI.Services
 
         private readonly Dictionary<string, double> _last =
             new(StringComparer.Ordinal);
-        private readonly Dictionary<string, double> _frame =
+        private Dictionary<string, double> _frame =
+            new(StringComparer.Ordinal);
+        private Dictionary<string, double> _emitBuffer =
             new(StringComparer.Ordinal);
 
-        private const int PollIntervalMs = 16;      // ~60 Hz
-        private const int MinBatchIntervalMs = 4;   // ~250 Hz
+        private const int PollIntervalMs = 8;       // ~120 Hz para reduzir latÛncia
+        private const int MinBatchIntervalMs = 2;   // evita tempestade de eventos
         private long _lastBatchTicks;
 
         // ----- Config de entrada -----
@@ -168,6 +170,7 @@ namespace AvaloniaUI.Services
 
             _last.Clear();
             _frame.Clear();
+            _emitBuffer.Clear();
 
             _usingGamepad = false;
             CurrentPadName = null;
@@ -453,8 +456,12 @@ namespace AvaloniaUI.Services
         // Loop principal
         // -------------------------------------------------
 
-        private unsafe void PollLoop(CancellationToken token)
+                        private unsafe void PollLoop(CancellationToken token)
         {
+            Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+            var sw = Stopwatch.StartNew();
+            long nextTick = PollIntervalMs;
+
             while (!token.IsCancellationRequested)
             {
                 PumpEvents(); // processa add/remove
@@ -462,8 +469,6 @@ namespace AvaloniaUI.Services
                 // mesmo quando a janela perde o foco (sem depender apenas de eventos).
                 SDL_UpdateJoysticks();
                 SDL_UpdateGamepads();
-
-               
 
                 if (_usingGamepad && _pad != null)
                 {
@@ -479,17 +484,30 @@ namespace AvaloniaUI.Services
                 }
                 else
                 {
-                    // Nenhum device vï¿½lido no momento
-                    // (ConnectionChanged(false) jï¿½ ï¿½ tratado em OpenFirstPad)
+                    // Nenhum device valido no momento
+                    // (ConnectionChanged(false) ja e tratado em OpenFirstPad)
                 }
 
                 FlushBatch(); // dispara InputBatch
-                Thread.Sleep(PollIntervalMs);
+
+                var remaining = nextTick - sw.ElapsedMilliseconds;
+                if (remaining > 0)
+                {
+                    if (token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(remaining)))
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    // re-sincroniza quando o loop ficar atrasado
+                    nextTick = sw.ElapsedMilliseconds;
+                }
+
+                nextTick += PollIntervalMs;
             }
         }
-
-
-        // -------------------------------------------------
+// -------------------------------------------------
         // Eventos SDL
         // -------------------------------------------------
 
@@ -733,14 +751,16 @@ namespace AvaloniaUI.Services
 
             _lastBatchTicks = now;
 
-            var snap = new Dictionary<string, double>(_frame);
+            var snap = _emitBuffer;
+            _emitBuffer = _frame;
+            _frame = snap;
             _frame.Clear();
 
 #if DEBUG
-            Debug.WriteLine("[BATCH] " + string.Join(", ", snap));
+            Debug.WriteLine("[BATCH] " + string.Join(", ", _emitBuffer));
 #endif
 
-            InputBatch?.Invoke(snap);
+            InputBatch?.Invoke(_emitBuffer);
         }
 
         // -------------------------------------------------
@@ -774,6 +794,15 @@ namespace AvaloniaUI.Services
             => x < min ? min : (x > max ? max : x);
     }
 }
+
+
+
+
+
+
+
+
+
 
 
 

@@ -817,8 +817,8 @@ C:\Users\Saga\Documents\VScode\NirvanaRemap\Core\obj\Debug\net9.0\Core.genruntim
 C:\Users\Saga\Documents\VScode\NirvanaRemap\Core\obj\Debug\net9.0\ref\Core.dll
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Core\bin\Debug\net9.0\testhost.dll
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Core\bin\Debug\net9.0\xunit.abstractions.dll
-C:\Users\Saga\Documents\GitHub\RemapNirvana\Core\bin\Debug\net9.0\xunit.runner.visualstudio.testadapter.dll
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Core\bin\Debug\net9.0\testhost.exe
+C:\Users\Saga\Documents\GitHub\RemapNirvana\Core\bin\Debug\net9.0\xunit.runner.visualstudio.testadapter.dll
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Core\bin\Debug\net9.0\Core.deps.json
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Core\bin\Debug\net9.0\Core.runtimeconfig.json
 C:\Users\Saga\Documents\GitHub\RemapNirvana\Core\bin\Debug\net9.0\Core.dll
