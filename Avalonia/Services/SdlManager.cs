@@ -8,7 +8,6 @@ using AvaloniaUI.Services;
 using Core.Interfaces;
 using Infrastructure.HidHide;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;

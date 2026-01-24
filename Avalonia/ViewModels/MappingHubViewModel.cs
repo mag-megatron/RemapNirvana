@@ -82,6 +82,7 @@ namespace AvaloniaUI.ViewModels
     {
         [ObservableProperty] private string filter = "";
         [ObservableProperty] private string conflictSummary = "";
+        [ObservableProperty] private string newProfileName = "";
 
         // ? NOVO: lista de perfis + perfil atual
         public ObservableCollection<string> AvailableProfiles { get; } = new();
@@ -102,8 +103,10 @@ namespace AvaloniaUI.ViewModels
         public IRelayCommand SaveCommand { get; }
         public IRelayCommand CancelCommand { get; }
         public IRelayCommand NewProfileCommand { get; }
+        public IRelayCommand DeleteProfileCommand { get; }
 
         public bool CanSave => Items.All(i => string.IsNullOrEmpty(i.ConflictNote));
+        public bool CanDeleteCurrentProfile => !IsDefaultProfile(CurrentProfileId);
 
         public IInputCaptureService CaptureService { get; }
         public IMappingStore MappingStore { get; }
@@ -155,14 +158,14 @@ namespace AvaloniaUI.ViewModels
             CancelCommand = new RelayCommand(() => { /* fechar/navegar no host */ });
 
             NewProfileCommand = new AsyncRelayCommand(CreateNewProfileAsync);
+            DeleteProfileCommand = new AsyncRelayCommand(DeleteCurrentProfileAsync, () => CanDeleteCurrentProfile);
 
             _ = LoadAsync();
         }
 
         private async Task CreateNewProfileAsync()
         {
-            // gera um nome simples: perfil_1, perfil_2...
-            string baseName = "perfil";
+            var baseName = GetDesiredProfileName();
             int idx = 1;
             string candidate;
 
@@ -170,7 +173,10 @@ namespace AvaloniaUI.ViewModels
             {
                 candidate = $"{baseName}_{idx}";
                 idx++;
-            } while (AvailableProfiles.Contains(candidate, StringComparer.OrdinalIgnoreCase));
+            } while (IsDefaultProfile(candidate) || AvailableProfiles.Contains(candidate, StringComparer.OrdinalIgnoreCase));
+
+            if (!IsDefaultProfile(baseName) && !AvailableProfiles.Contains(baseName, StringComparer.OrdinalIgnoreCase))
+                candidate = baseName;
 
             // Garante que o arquivo do novo perfil exista (gera defaults se preciso)
             await MappingStore.LoadAsync(candidate, CancellationToken.None);
@@ -185,6 +191,24 @@ namespace AvaloniaUI.ViewModels
             // zera os itens atuais (vai recarregar com defaults) e aplica em tempo real
             Items.Clear();
             await LoadAsync(refreshProfiles: false, raiseSaved: true);
+
+            NewProfileName = "";
+        }
+
+        private async Task DeleteCurrentProfileAsync()
+        {
+            var profileId = CurrentProfileId;
+            if (IsDefaultProfile(profileId))
+                return;
+
+            var deleted = await MappingStore.DeleteProfileAsync(profileId, CancellationToken.None);
+            if (!deleted)
+                return;
+
+            await LoadProfilesAsync();
+
+            if (!string.Equals(CurrentProfileId, profileId, StringComparison.OrdinalIgnoreCase))
+                await LoadAsync(refreshProfiles: false, raiseSaved: true);
         }
 
         private void ApplyFilter()
@@ -222,6 +246,9 @@ namespace AvaloniaUI.ViewModels
 
         partial void OnCurrentProfileIdChanged(string? value)
         {
+            OnPropertyChanged(nameof(CanDeleteCurrentProfile));
+            (DeleteProfileCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+
             if (suppressProfileChangedHandling)
                 return;
 
@@ -327,6 +354,28 @@ namespace AvaloniaUI.ViewModels
 
             // avisa o MainViewModel pra recarregar o engine
             Saved?.Invoke();
+        }
+
+        private static bool IsDefaultProfile(string? profileId)
+        {
+            return string.IsNullOrWhiteSpace(profileId)
+                || profileId.Equals("mapping", StringComparison.OrdinalIgnoreCase)
+                || profileId.Equals("default", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private string GetDesiredProfileName()
+        {
+            var raw = (NewProfileName ?? "").Trim();
+            if (raw.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                raw = System.IO.Path.GetFileNameWithoutExtension(raw);
+
+            var sanitized = string.Join("_",
+                raw.Split(System.IO.Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+
+            if (string.IsNullOrWhiteSpace(sanitized))
+                return "perfil";
+
+            return sanitized;
         }
     }
 }

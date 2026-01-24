@@ -19,5 +19,7 @@ namespace AvaloniaUI.Hub
             CancellationToken ct);
 
         Task<string[]> ListProfilesAsync(CancellationToken ct);
+
+        Task<bool> DeleteProfileAsync(string? profileId, CancellationToken ct);
     }
 }

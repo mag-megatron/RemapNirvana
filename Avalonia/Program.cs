@@ -82,8 +82,8 @@ internal static class Program
         sc.AddSingleton<IInputCaptureService, SdlCaptureService>();
 
         // Views
-        sc.AddTransient<AvaloniaUI.Views.MappingHubView>();
-        sc.AddTransient<AvaloniaUI.Views.MappingHubWindow>();
+       // sc.AddTransient<AvaloniaUI.Views.MappingHubView>();
+       // sc.AddTransient<AvaloniaUI.Views.MappingHubWindow>();
         sc.AddTransient<AvaloniaUI.Views.DiagnosticsGamepadWindow>();
 
         // ViewModels

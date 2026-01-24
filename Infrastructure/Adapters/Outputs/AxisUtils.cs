@@ -16,5 +16,25 @@
                 ? (short)(value * 32767)
                 : (short)(value * 32768);
         }
+
+        /// <summary>
+        /// Maps a circular stick vector to a square response while preserving radius.
+        /// This boosts diagonals for games that interpret stick input as square.
+        /// </summary>
+        public static (float x, float y) CircleToSquare(float x, float y)
+        {
+            var max = MathF.Max(MathF.Abs(x), MathF.Abs(y));
+            if (max <= 0f)
+                return (0f, 0f);
+
+            var r = MathF.Sqrt(x * x + y * y);
+            if (r <= 0f)
+                return (0f, 0f);
+
+            var scale = r / max;
+            var nx = Math.Clamp(x * scale, -1f, 1f);
+            var ny = Math.Clamp(y * scale, -1f, 1f);
+            return (nx, ny);
+        }
     }
 }

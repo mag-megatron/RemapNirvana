@@ -118,15 +118,12 @@ namespace AvaloniaUI.Services
                 .Select(Path.GetFileNameWithoutExtension)
                 .OfType<string>()
                 .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Where(name => !IsDefaultProfile(name))
                 .ToList();
 
             // Garante que o perfil "mapping" (default) esteja sempre na primeira posicao da lista
             // e seja chamado de "mapping" ou "default".
             var defaultProfileName = "mapping";
-            if (files.Contains(defaultProfileName))
-            {
-                files.Remove(defaultProfileName);
-            }
             files.Insert(0, defaultProfileName);
 
             // Remove duplicatas preservando a ordem (default primeiro)
@@ -134,6 +131,28 @@ namespace AvaloniaUI.Services
             var ordered = files.Where(name => seen.Add(name)).ToArray();
 
             return Task.FromResult(ordered);
+        }
+
+        public Task<bool> DeleteProfileAsync(string? profileId, CancellationToken ct)
+        {
+            if (IsDefaultProfile(profileId))
+                return Task.FromResult(false);
+
+            ct.ThrowIfCancellationRequested();
+
+            var path = ResolvePath(profileId);
+            if (!File.Exists(path))
+                return Task.FromResult(false);
+
+            try
+            {
+                File.Delete(path);
+                return Task.FromResult(true);
+            }
+            catch
+            {
+                return Task.FromResult(false);
+            }
         }
 
         // ----------------------------------------------------------
@@ -148,9 +167,7 @@ namespace AvaloniaUI.Services
         private string ResolvePath(string? profileId)
         {
             // Trata IDs vazios ou "default/mapping" como o caminho padrao.
-            if (string.IsNullOrWhiteSpace(profileId)
-                || profileId.Equals("mapping", StringComparison.OrdinalIgnoreCase)
-                || profileId.Equals("default", StringComparison.OrdinalIgnoreCase))
+            if (IsDefaultProfile(profileId))
             {
                 return _defaultPath;
             }
@@ -165,6 +182,13 @@ namespace AvaloniaUI.Services
             }
 
             return Path.Combine(_dir, safe + ".json");
+        }
+
+        private static bool IsDefaultProfile(string? profileId)
+        {
+            return string.IsNullOrWhiteSpace(profileId)
+                || profileId.Equals("mapping", StringComparison.OrdinalIgnoreCase)
+                || profileId.Equals("default", StringComparison.OrdinalIgnoreCase);
         }
 
         // ----------------------------------------------------------

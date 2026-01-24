@@ -48,6 +48,14 @@ namespace Infrastructure.Adapters.Outputs
         {
             if (!_connected || _controller == null) return;
 
+            var lx = outputState.TryGetValue("ThumbLX", out var lxValue) ? lxValue : 0f;
+            var ly = outputState.TryGetValue("ThumbLY", out var lyValue) ? lyValue : 0f;
+            var rx = outputState.TryGetValue("ThumbRX", out var rxValue) ? rxValue : 0f;
+            var ry = outputState.TryGetValue("ThumbRY", out var ryValue) ? ryValue : 0f;
+
+            var (sqLx, sqLy) = AxisUtils.CircleToSquare(lx, ly);
+            var (sqRx, sqRy) = AxisUtils.CircleToSquare(rx, ry);
+
             _controller.SetButtonState(Xbox360Button.A, outputState.TryGetValue("ButtonA", out var a) && a > 0.5f);
             _controller.SetButtonState(Xbox360Button.B, outputState.TryGetValue("ButtonB", out var b) && b > 0.5f);
             _controller.SetButtonState(Xbox360Button.X, outputState.TryGetValue("ButtonX", out var x) && x > 0.5f);
@@ -70,11 +78,11 @@ namespace Infrastructure.Adapters.Outputs
             _controller.SetSliderValue(Xbox360Slider.LeftTrigger, (byte)(Math.Clamp(outputState.TryGetValue("TriggerLeft", out var lt) ? lt : 0f, 0f, 1f) * 255));
             _controller.SetSliderValue(Xbox360Slider.RightTrigger, (byte)(Math.Clamp(outputState.TryGetValue("TriggerRight", out var rt) ? rt : 0f, 0f, 1f) * 255));
 
-            _controller.SetAxisValue(Xbox360Axis.LeftThumbX, AxisToShort(outputState.TryGetValue("ThumbLX", out var lx) ? lx : 0f));
+            _controller.SetAxisValue(Xbox360Axis.LeftThumbX, AxisToShort(sqLx));
             // SDL usa Y positivo para baixo; XInput/ViGEm usa positivo para cima. Inverte para casar.
-            _controller.SetAxisValue(Xbox360Axis.LeftThumbY, AxisToShort(-(outputState.TryGetValue("ThumbLY", out var ly) ? ly : 0f)));
-            _controller.SetAxisValue(Xbox360Axis.RightThumbX, AxisToShort(outputState.TryGetValue("ThumbRX", out var rx) ? rx : 0f));
-            _controller.SetAxisValue(Xbox360Axis.RightThumbY, AxisToShort(-(outputState.TryGetValue("ThumbRY", out var ry) ? ry : 0f)));
+            _controller.SetAxisValue(Xbox360Axis.LeftThumbY, AxisToShort(-sqLy));
+            _controller.SetAxisValue(Xbox360Axis.RightThumbX, AxisToShort(sqRx));
+            _controller.SetAxisValue(Xbox360Axis.RightThumbY, AxisToShort(-sqRy));
             // MUITO IMPORTANTE: aplique o report todo de uma vez
             try
             {

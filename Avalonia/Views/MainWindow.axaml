@@ -244,10 +244,17 @@
                                     <ComboBox Width="160"
                                               ItemsSource="{Binding Hub.AvailableProfiles}"
                                               SelectedItem="{Binding Hub.CurrentProfileId, Mode=TwoWay}" />
+                                    <TextBox Width="160"
+                                             Watermark="Nome do perfil"
+                                             Text="{Binding Hub.NewProfileName, Mode=TwoWay}" />
                                     <Button Content="+"
                                             Classes="secondary"
                                             Width="36"
                                             Command="{Binding Hub.NewProfileCommand}" />
+                                    <Button Content="Excluir"
+                                            Classes="danger"
+                                            Command="{Binding Hub.DeleteProfileCommand}"
+                                            ToolTip.Tip="Excluir perfil" />
                                 </StackPanel>
                             </Grid>
 
