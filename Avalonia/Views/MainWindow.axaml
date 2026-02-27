@@ -14,6 +14,7 @@
         MinWidth="1000"
         MinHeight="600"
         Title="Nirvana Remap"
+        Icon="/Assets/nirvanaIcon.ico"
         Background="#0e1419"
         FontFamily="Segoe UI,Arial">
 

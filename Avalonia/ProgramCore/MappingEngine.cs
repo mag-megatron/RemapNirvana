@@ -36,9 +36,35 @@ namespace AvaloniaUI.ProgramCore
         }
 
         /// <summary>
-        /// Loads the mapping JSON into the in-memory dictionary; when profileId is null,
-        /// the default mapping file is used. The last mapping for the same physical input wins.
+        /// Loads mapping configuration from storage and builds the internal physical-to-logical mapping dictionary.
         /// </summary>
+        /// <param name="profileId">
+        /// Optional profile identifier to load. If <c>null</c>, loads the default mapping profile.
+        /// </param>
+        /// <param name="ct">Cancellation token for async operation.</param>
+        /// <returns>A task representing the asynchronous load operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if IMappingStore is null (should never occur if DI is configured correctly).
+        /// </exception>
+        /// <remarks>
+        /// <para><strong>Conflict Resolution:</strong></para>
+        /// <para>
+        /// If multiple logical actions are mapped to the same physical input,
+        /// the last occurrence in the mapping file wins. A debug warning is logged when this occurs.
+        /// </para>
+        /// <para><strong>Side Effects:</strong></para>
+        /// <list type="bullet">
+        ///   <item>Replaces the entire internal mapping dictionary</item>
+        ///   <item>Logs warnings to Debug output when duplicate bindings are detected</item>
+        /// </list>
+        /// <para><strong>Example Mapping Data:</strong></para>
+        /// <code>
+        /// {
+        ///   "ButtonA": "ButtonSouth",
+        ///   "ThumbLX": "LeftStickX_Pos"
+        /// }
+        /// </code>
+        /// </remarks>
         public async Task LoadAsync(string? profileId = null, CancellationToken ct = default)
         {
             var loaded = await _store.LoadAsync(profileId, ct);
@@ -67,9 +93,53 @@ namespace AvaloniaUI.ProgramCore
         // ------------------------------------------------------------
 
         /// <summary>
-        /// Builds the final output state from the incoming snapshot and the configured
-        /// physical-to-action mapping.
+        /// Transforms a physical input snapshot into a virtual Xbox 360 controller output state
+        /// using the loaded mapping configuration.
         /// </summary>
+        /// <param name="snap">
+        /// Physical input snapshot dictionary (name → normalized value).
+        /// Expected keys: "LX", "LY", "RX", "RY", "LT", "RT", "A", "B", "X", "Y",
+        /// "LB", "RB", "L3", "R3", "View", "Menu", "DUp", "DDown", "DLeft", "DRight".
+        /// Values range from -1.0 to 1.0 for axes, 0.0 to 1.0 for triggers, 0.0 or 1.0 for buttons.
+        /// </param>
+        /// <returns>
+        /// XInput-compatible output state dictionary with keys:
+        /// "ButtonA", "ButtonB", "ButtonX", "ButtonY", "ButtonLeftShoulder", "ButtonRightShoulder",
+        /// "ButtonStart", "ButtonBack", "ThumbLPressed", "ThumbRPressed",
+        /// "DPadUp", "DPadDown", "DPadLeft", "DPadRight",
+        /// "TriggerLeft", "TriggerRight", "ThumbLX", "ThumbLY", "ThumbRX", "ThumbRY".
+        /// </returns>
+        /// <remarks>
+        /// <para><strong>Mapping Rules:</strong></para>
+        /// <list type="number">
+        ///   <item>
+        ///     <description><strong>Buttons:</strong> Always output as digital (0.0 or 1.0)</description>
+        ///   </item>
+        ///   <item>
+        ///     <description><strong>Triggers:</strong> Output as analog (0.0 to 1.0) if mapped to trigger outputs, else digital</description>
+        ///   </item>
+        ///   <item>
+        ///     <description><strong>Axes:</strong> Output as analog (-1.0 to 1.0) if mapped to axis outputs, else digital with 0.6 threshold</description>
+        ///   </item>
+        ///   <item>
+        ///     <description><strong>Directional Mapping:</strong> If only one direction (Pos or Neg) is mapped for an axis output, the full bidirectional axis is used</description>
+        ///   </item>
+        /// </list>
+        /// <para><strong>State Management:</strong></para>
+        /// <para>
+        /// Incoming snapshots are treated as deltas. The method maintains cumulative physical state
+        /// internally to avoid clearing inputs that are absent from a particular snapshot.
+        /// </para>
+        /// <para><strong>Side Effects:</strong></para>
+        /// <list type="bullet">
+        ///   <item>Updates internal <c>_physicalState</c> dictionary</item>
+        ///   <item>No external I/O or logging (pure transformation)</item>
+        /// </list>
+        /// <para><strong>Exception Behavior:</strong></para>
+        /// <para>
+        /// Does not throw exceptions. Unknown or unmapped inputs are silently ignored.
+        /// </para>
+        /// </remarks>
         public Dictionary<string, float> BuildOutput(IReadOnlyDictionary<string, double> snap)
         {
             // Snapshots are deltas; keep a full state to avoid clearing inputs absent from this batch.

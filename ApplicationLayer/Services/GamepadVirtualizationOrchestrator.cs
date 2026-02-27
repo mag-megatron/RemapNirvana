@@ -25,10 +25,35 @@ namespace ApplicationLayer.Services
         }
 
         /// <summary>
-        /// Configura o HidHide para:
-        /// - manter o NirvanaRemap visivel ao controle fisico
-        /// - esconder os devices fisicos dos jogos
+        /// Configures HidHide to ensure physical devices are hidden from games
+        /// while allowing this application to access them.
         /// </summary>
+        /// <param name="devicesToHide">
+        /// Collection of device instance paths to add to the HidHide blacklist.
+        /// These devices will be hidden from all applications except those in the whitelist.
+        /// </param>
+        /// <returns>
+        /// <c>true</c> if virtualization was successfully configured;
+        /// <c>false</c> if HidHide is not installed or detectable.
+        /// </returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when the executable path for this application cannot be determined after
+        /// trying multiple fallback methods (Environment.ProcessPath, Process.MainModule, Assembly.Location).
+        /// </exception>
+        /// <remarks>
+        /// <para><strong>Side Effects:</strong></para>
+        /// <list type="bullet">
+        ///   <item>Modifies Windows Registry via HidHide CLI to add this application to the whitelist</item>
+        ///   <item>Enables global hiding in HidHide configuration</item>
+        ///   <item>Adds all specified devices to the HidHide device blacklist</item>
+        /// </list>
+        /// <para><strong>Behavior:</strong></para>
+        /// <para>
+        /// The method attempts to determine the executable path using multiple fallback strategies
+        /// to ensure compatibility across different deployment scenarios (single-file publish, dotnet run, etc.).
+        /// Duplicate device paths are automatically deduplicated.
+        /// </para>
+        /// </remarks>
         public async Task<bool> EnsureVirtualIsPrimaryAsync(IEnumerable<string> devicesToHide)
         {
             if (_hidHide == null)
@@ -133,8 +158,30 @@ namespace ApplicationLayer.Services
         }
 
         /// <summary>
-        /// Remove devices da lista de ocultos (nao mexe no global).
+        /// Removes specified devices from the HidHide blacklist, making them visible to games again.
         /// </summary>
+        /// <param name="devicesToUnhide">
+        /// Collection of device instance paths to remove from the HidHide blacklist.
+        /// </param>
+        /// <returns>
+        /// <c>true</c> if devices were successfully removed from the blacklist;
+        /// <c>false</c> if HidHide is not installed.
+        /// </returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when IHidHideService is null or not properly configured.
+        /// </exception>
+        /// <remarks>
+        /// <para><strong>Side Effects:</strong></para>
+        /// <list type="bullet">
+        ///   <item>Modifies Windows Registry via HidHide CLI to remove devices from blacklist</item>
+        /// </list>
+        /// <para><strong>Note:</strong></para>
+        /// <para>
+        /// This method does NOT disable global hiding. If global hiding is still enabled,
+        /// other devices in the blacklist will remain hidden. To fully disable HidHide,
+        /// you must separately disable global hiding via the HidHide service.
+        /// </para>
+        /// </remarks>
         public async Task<bool> DisableVirtualizationAsync(IEnumerable<string> devicesToUnhide)
         {
             if (_hidHide == null)

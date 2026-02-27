@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading.Channels;
 using AvaloniaUI.Hub;
 using AvaloniaUI.ProgramCore;
+using System.IO;
 
 namespace AvaloniaUI.Services
 {
@@ -18,8 +19,12 @@ namespace AvaloniaUI.Services
         private readonly GamepadRemapService _capture;
         private readonly MappingEngine _engine;
         private readonly Infrastructure.Adapters.Outputs.ViGEmOutput _vigem;
-        private readonly Channel<Dictionary<string, double>> _inputQueue =
-            Channel.CreateBounded<Dictionary<string, double>>(
+
+        // Wrapper para medir latência da fila
+        private readonly record struct QueuedSnapshot(Dictionary<string, double> Data, long EnqueueTick);
+
+        private readonly Channel<QueuedSnapshot> _inputQueue =
+            Channel.CreateBounded<QueuedSnapshot>(
                 new BoundedChannelOptions(capacity: 8)
                 {
                     SingleWriter = true,
@@ -29,6 +34,12 @@ namespace AvaloniaUI.Services
 
         private CancellationTokenSource? _workerCts;
         private Task? _workerTask;
+
+        // Telemetría básica
+        private int _sampleCount = 0;
+        private double _maxLatencyMs = 0;
+        private double _accLatencyMs = 0;
+        private long _lastReportTick = 0;
 
         public RawVirtualizationRunner(
             GamepadRemapService capture,
@@ -48,6 +59,7 @@ namespace AvaloniaUI.Services
             _capture.StartAsync();
 
             Console.WriteLine("[RAW] Capturando entradas físicas e emitindo via ViGEm. Ctrl+C para sair.");
+            Console.WriteLine("[PERF] Monitoramento de latência ATIVO (Log a cada 5s).");
 
             try
             {
@@ -90,7 +102,10 @@ namespace AvaloniaUI.Services
                 // Cópia leve para não bloquear o loop de captura nem depender
                 // do buffer reutilizado pelo GamepadRemapService.
                 var copy = new Dictionary<string, double>(snapshot, StringComparer.Ordinal);
-                _inputQueue.Writer.TryWrite(copy);
+                
+                // Timestamp de entrada na fila (Producer)
+                long tick = Stopwatch.GetTimestamp();
+                _inputQueue.Writer.TryWrite(new QueuedSnapshot(copy, tick));
             }
             catch (Exception ex)
             {
@@ -100,13 +115,17 @@ namespace AvaloniaUI.Services
 
         private async Task ProcessQueueAsync(CancellationToken ct)
         {
+            InitCsv();
+            _lastReportTick = Stopwatch.GetTimestamp();
+
             try
             {
                 while (await _inputQueue.Reader.WaitToReadAsync(ct).ConfigureAwait(false))
                 {
-                    while (_inputQueue.Reader.TryRead(out var snap))
+                    while (_inputQueue.Reader.TryRead(out var item))
                     {
-                        var outState = _engine.BuildOutput(snap);
+                        // Processamento (Consumer)
+                        var outState = _engine.BuildOutput(item.Data);
 
                         try
                         {
@@ -116,6 +135,13 @@ namespace AvaloniaUI.Services
                         {
                             Debug.WriteLine("[RAW] Falha ao aplicar estado ViGEm: " + ex);
                         }
+
+                        // Calcular Latência (Enqueue -> Applied)
+                        long currentTick = Stopwatch.GetTimestamp();
+                        double latencyMs = (currentTick - item.EnqueueTick) * 1000.0 / Stopwatch.Frequency;
+
+                        RecordMetric(latencyMs, currentTick);
+                        LogToCsv(currentTick, latencyMs);
                     }
                 }
             }
@@ -126,6 +152,58 @@ namespace AvaloniaUI.Services
             catch (Exception ex)
             {
                 Debug.WriteLine("[RAW] Loop de processamento interrompido: " + ex);
+            }
+            finally
+            {
+                _csvWriter?.Dispose();
+                _csvWriter = null;
+            }
+        }
+
+        private StreamWriter? _csvWriter;
+
+        private void InitCsv()
+        {
+            try
+            {
+                var path = Path.Combine(AppContext.BaseDirectory, "latency_stats.csv");
+                _csvWriter = new StreamWriter(path, append: false);
+                _csvWriter.WriteLine("Tick,LatencyMs");
+                Console.WriteLine($"[LOG] Salvando métricas em: {path}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERR] Falha ao criar CSV: {ex.Message}");
+            }
+        }
+
+        private void LogToCsv(long tick, double latency)
+        {
+            if (_csvWriter == null) return;
+            // Escreve apenas os dados brutos para minimizar overhead
+            _csvWriter.WriteLine($"{tick},{latency:F6}");
+        }
+
+        private void RecordMetric(double latencyMs, long currentTick)
+        {
+            _sampleCount++;
+            _accLatencyMs += latencyMs;
+            if (latencyMs > _maxLatencyMs) _maxLatencyMs = latencyMs;
+
+            // Reportar a cada 5 segundos (aprox)
+            double secondsSinceLast = (currentTick - _lastReportTick) * 1.0 / Stopwatch.Frequency;
+            if (secondsSinceLast >= 5.0)
+            {
+                if (_sampleCount > 0)
+                {
+                    double avg = _accLatencyMs / _sampleCount;
+                    Console.WriteLine($"[PERF] Latência Interna (Queue+Process): Méd={avg:F3}ms | Máx={_maxLatencyMs:F3}ms | Samples={_sampleCount}");
+                }
+
+                _sampleCount = 0;
+                _accLatencyMs = 0;
+                _maxLatencyMs = 0;
+                _lastReportTick = currentTick;
             }
         }
 

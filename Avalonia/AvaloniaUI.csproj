@@ -9,6 +9,7 @@
 	  <AssemblyName>NirvanaRemap</AssemblyName>
 	  <RootNamespace>NirvanaRemap</RootNamespace>
 	  <ApplicationManifest>app.manifest</ApplicationManifest>
+	  <ApplicationIcon>Assets\nirvanaIcon.ico</ApplicationIcon>
   </PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
 		<Optimize>false</Optimize>
